@@ -3,7 +3,7 @@ Rate limiting utilities for PyPitch API.
 """
 
 import time
-from typing import Dict, Tuple
+from typing import Optional
 from collections import defaultdict
 import threading
 from fastapi import HTTPException, Request
@@ -13,8 +13,9 @@ class RateLimiter:
 
     def __init__(self, requests_per_minute: int = 60):
         self.requests_per_minute = requests_per_minute
-        self.requests: Dict[str, list] = defaultdict(list)
+        self.requests: dict[str, list] = defaultdict(list)
         self.lock = threading.Lock()
+        self.window = 60  # 1 minute window in seconds
 
     def is_allowed(self, key: str) -> bool:
         """Check if request is allowed for the given key."""
@@ -42,12 +43,12 @@ class RateLimiter:
             return max(0, self.requests_per_minute - len(self.requests[key]))
 
     def get_reset_time(self, key: str) -> float:
-        """Get time until rate limit resets."""
+        """Get time until rate limit resets. Returns full window duration if no requests yet."""
         with self.lock:
-            if not self.requests[key]:
-                return 0
+            if key not in self.requests or not self.requests[key]:
+                return self.window  # Full window duration for new clients
             oldest_request = min(self.requests[key])
-            return max(0, (oldest_request + 60) - time.time())
+            return max(0, (oldest_request + self.window) - time.time())
 
 # Global rate limiter instance
 rate_limiter = RateLimiter()

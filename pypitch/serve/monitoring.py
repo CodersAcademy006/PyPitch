@@ -4,13 +4,16 @@ Monitoring and metrics collection for PyPitch API.
 
 import time
 import threading
-from typing import Dict, Any, List
+from typing import Any
 from collections import defaultdict
 import psutil
 import logging
-from datetime import datetime, timedelta
+import os
 
 logger = logging.getLogger(__name__)
+
+# Initialize CPU tracking on module import
+psutil.cpu_percent(interval=None)
 
 class MetricsCollector:
     """Collects and stores API metrics."""
@@ -45,22 +48,24 @@ class MetricsCollector:
                 'message': message
             })
 
-    def get_system_metrics(self) -> Dict[str, Any]:
+    def get_system_metrics(self) -> dict[str, Any]:
         """Get current system metrics."""
         try:
+            # Get current working directory for disk usage (portable across OS)
+            disk_path = os.getcwd()
             return {
-                'cpu_percent': psutil.cpu_percent(interval=1),
+                'cpu_percent': psutil.cpu_percent(interval=None),  # Non-blocking
                 'memory_percent': psutil.virtual_memory().percent,
                 'memory_used_mb': psutil.virtual_memory().used / 1024 / 1024,
                 'memory_available_mb': psutil.virtual_memory().available / 1024 / 1024,
-                'disk_usage_percent': psutil.disk_usage('/').percent,
+                'disk_usage_percent': psutil.disk_usage(disk_path).percent,
                 'timestamp': time.time()
             }
         except Exception as e:
-            logger.error(f"Failed to collect system metrics: {e}")
+            logger.exception(f"Failed to collect system metrics: {e}")
             return {}
 
-    def get_api_metrics(self, since: float = None) -> Dict[str, Any]:
+    def get_api_metrics(self, since: float = None) -> dict[str, Any]:
         """Get API usage metrics."""
         if since is None:
             since = time.time() - 3600  # Last hour
@@ -73,7 +78,7 @@ class MetricsCollector:
             return {
                 'total_requests': 0,
                 'avg_response_time': 0,
-                'error_rate': 0,
+                'errors_per_request': 0,  # Renamed for clarity
                 'requests_per_minute': 0,
                 'status_codes': {},
                 'endpoints': {}
@@ -81,7 +86,8 @@ class MetricsCollector:
 
         total_requests = len(requests)
         avg_response_time = sum(r['duration'] for r in requests) / total_requests
-        error_rate = len(errors) / total_requests if total_requests > 0 else 0
+        # Count errors per request (not error rate as it counts error events, not failed requests)
+        errors_per_request = len(errors) / total_requests if total_requests > 0 else 0
 
         # Calculate requests per minute
         time_span = time.time() - since
@@ -100,13 +106,13 @@ class MetricsCollector:
         return {
             'total_requests': total_requests,
             'avg_response_time': round(avg_response_time, 3),
-            'error_rate': round(error_rate, 3),
+            'errors_per_request': round(errors_per_request, 3),
             'requests_per_minute': round(requests_per_minute, 2),
             'status_codes': dict(status_codes),
             'endpoints': dict(endpoints)
         }
 
-    def _cleanup_old_metrics(self):
+    def _cleanup_old_metrics(self) -> None:
         """Remove metrics older than max_metrics_age."""
         cutoff = time.time() - self.max_metrics_age
         for metric_list in self.metrics.values():
