@@ -18,9 +18,17 @@ DATABASE_THREADS = int(os.getenv("PYPITCH_DB_THREADS", "4"))
 DATABASE_MEMORY_LIMIT = os.getenv("PYPITCH_DB_MEMORY", "2GB")
 
 # API settings
-API_HOST = os.getenv("PYPITCH_API_HOST", "0.0.0.0")
+# Default to 0.0.0.0 for container compatibility; use network controls for security
+# In production, restrict access via environment overrides (PYPITCH_API_HOST) and network controls
+API_HOST = os.getenv("PYPITCH_API_HOST", "0.0.0.0")  # nosec B104
 API_PORT = int(os.getenv("PYPITCH_API_PORT", "8000"))
-API_CORS_ORIGINS = os.getenv("PYPITCH_CORS_ORIGINS", "*").split(",")
+
+# Parse CORS origins from comma-separated string
+_cors_origins = os.getenv("PYPITCH_CORS_ORIGINS", "*")
+if _cors_origins:
+    API_CORS_ORIGINS = [origin.strip() for origin in _cors_origins.split(",") if origin.strip()]
+else:
+    API_CORS_ORIGINS = []
 
 # Cache settings
 CACHE_TTL = int(os.getenv("PYPITCH_CACHE_TTL", "3600"))  # 1 hour default
@@ -28,6 +36,14 @@ CACHE_TTL = int(os.getenv("PYPITCH_CACHE_TTL", "3600"))  # 1 hour default
 # Security settings
 SECRET_KEY = os.getenv("PYPITCH_SECRET_KEY", "dev-secret-key-change-in-production")
 API_KEY_REQUIRED = os.getenv("PYPITCH_API_KEY_REQUIRED", "false").lower() == "true"
+
+def validate_config():
+    """Validate configuration for production readiness."""
+    if SECRET_KEY == "dev-secret-key-change-in-production":
+        raise ValueError(
+            "PYPITCH_SECRET_KEY must be set to a secure value in production. "
+            "The default development key is not secure and allows authentication bypass via forged tokens."
+        )
 
 def set_debug(value: bool = True):
     """

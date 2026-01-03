@@ -19,8 +19,14 @@ from . import visuals
 
 # 5. Expose the Serve Module (lazy import to avoid dependency issues)
 # This lets users do: pp.serve()
-def serve(*args, **kwargs):
-    """Lazy import of serve function to avoid circular imports."""
+def serve(*args: any, **kwargs: any) -> None:
+    """
+    One-command API deployment (lazy loaded to avoid circular imports and heavy FastAPI dependency).
+    
+    Args:
+        *args: Positional arguments passed to the serve function
+        **kwargs: Keyword arguments passed to the serve function
+    """
     from .serve import serve as _serve
     return _serve(*args, **kwargs)
 

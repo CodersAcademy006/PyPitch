@@ -3,7 +3,7 @@ PyPitch API Client SDK
 """
 
 import requests
-from typing import Dict, Any, Optional, List
+from typing import Any, Optional
 from urllib.parse import urljoin
 import json
 
@@ -25,42 +25,42 @@ class PyPitchClient:
         if api_key:
             self.session.headers.update({"X-API-Key": api_key})
 
-    def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _get(self, endpoint: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """Make a GET request to the API."""
         url = urljoin(self.base_url + '/', endpoint.lstrip('/'))
         response = self.session.get(url, params=params)
         response.raise_for_status()
         return response.json()
 
-    def _post(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _post(self, endpoint: str, data: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """Make a POST request to the API."""
         url = urljoin(self.base_url + '/', endpoint.lstrip('/'))
         response = self.session.post(url, json=data)
         response.raise_for_status()
         return response.json()
 
-    def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> dict[str, Any]:
         """Check API health status."""
         return self._get("/health")
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get API and system metrics."""
         return self._get("/v1/metrics")
 
-    def list_matches(self) -> List[Dict[str, Any]]:
+    def list_matches(self) -> list[dict[str, Any]]:
         """List all available matches."""
         return self._get("/matches")
 
-    def get_match(self, match_id: str) -> Dict[str, Any]:
+    def get_match(self, match_id: str) -> dict[str, Any]:
         """Get details for a specific match."""
         return self._get(f"/matches/{match_id}")
 
-    def get_player_stats(self, player_id: str) -> Dict[str, Any]:
+    def get_player_stats(self, player_id: str) -> dict[str, Any]:
         """Get statistics for a specific player."""
         return self._get(f"/players/{player_id}")
 
     def predict_win_probability(self, venue: str, target: int, current_score: int,
-                              wickets_down: int, overs_remaining: float) -> Dict[str, Any]:
+                              wickets_down: int, overs_remaining: float) -> dict[str, Any]:
         """Predict win probability for a match situation."""
         params = {
             "venue": venue,
@@ -71,7 +71,7 @@ class PyPitchClient:
         }
         return self._get("/win_probability", params=params)
 
-    def analyze_custom(self, query: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def analyze_custom(self, query: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """Run custom analysis query."""
         data = {"query": query}
         if params:
@@ -79,7 +79,7 @@ class PyPitchClient:
         return self._post("/analyze", data)
 
     def register_live_match(self, match_id: str, source: str,
-                           metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                           metadata: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """Register a match for live ingestion."""
         data = {
             "match_id": match_id,
@@ -91,7 +91,7 @@ class PyPitchClient:
 
     def ingest_live_delivery(self, match_id: str, inning: int, over: int, ball: int,
                            runs_total: int, wickets_fallen: int, target: Optional[int] = None,
-                           venue: Optional[str] = None, timestamp: Optional[float] = None) -> Dict[str, Any]:
+                           venue: Optional[str] = None, timestamp: Optional[float] = None) -> dict[str, Any]:
         """Ingest live delivery data."""
         data = {
             "match_id": match_id,
@@ -109,7 +109,7 @@ class PyPitchClient:
             data["timestamp"] = timestamp
         return self._post("/live/ingest", data)
 
-    def get_live_matches(self) -> List[Dict[str, Any]]:
+    def get_live_matches(self) -> list[dict[str, Any]]:
         """Get list of active live matches."""
         return self._get("/live/matches")
 
@@ -124,5 +124,5 @@ def quick_health_check(base_url: str = "http://localhost:8000", api_key: Optiona
         client = PyPitchClient(base_url, api_key)
         health = client.health_check()
         return health.get("status") == "healthy"
-    except:
+    except Exception:
         return False

@@ -1,8 +1,11 @@
 import duckdb
 import pyarrow as pa
+import logging
 from typing import Dict, Any, Optional
 from pypitch.schema.v1 import BALL_EVENT_SCHEMA
 from pypitch.storage.connection_pool import ConnectionPool
+
+logger = logging.getLogger(__name__)
 
 class QueryEngine:
     def __init__(self, db_path: str = ":memory:") -> None:
@@ -11,13 +14,9 @@ class QueryEngine:
         :memory: is fast but volatile. Use a path for persistence.
         """
         self.db_path = db_path
+        # Connection pool creates connections with threads=2 and memory_limit='1GB'
+        # centralized configuration in ConnectionPool._create_connection
         self.pool = ConnectionPool(db_path, max_connections=5)
-
-        # Initialize database schema on first connection
-        with self.pool.connection() as con:
-            # Performance tuning for analytical workloads
-            con.execute("PRAGMA threads=4;")
-            con.execute("PRAGMA memory_limit='2GB';")
 
         # State tracking for deterministic hashing
         self._snapshot_id = "initial_empty"
@@ -45,7 +44,7 @@ class QueryEngine:
             incoming_rows = getattr(arrow_table, 'num_rows', None)
         except Exception:
             incoming_rows = None
-        print(f"[QueryEngine.ingest_events] snapshot_tag={snapshot_tag} append={append} incoming_rows={incoming_rows}")
+        logger.debug(f"Ingest events: snapshot_tag={snapshot_tag} append={append} incoming_rows={incoming_rows}")
 
         with self.pool.connection() as con:
             # Registers the Arrow table as a queryable view in DuckDB
@@ -53,22 +52,22 @@ class QueryEngine:
             con.register('arrow_view', arrow_table)
             try:
                 exists = self.table_exists("ball_events")
-                print(f"[QueryEngine.ingest_events] ball_events exists={exists}")
+                logger.debug(f"ball_events exists={exists}")
 
                 # Persist to disk
                 if append and exists:
-                    print("[QueryEngine.ingest_events] Performing INSERT INTO ball_events FROM arrow_view")
+                    logger.debug("Performing INSERT INTO ball_events FROM arrow_view")
                     con.execute("INSERT INTO ball_events SELECT * FROM arrow_view")
                 else:
-                    print("[QueryEngine.ingest_events] Creating or replacing ball_events from arrow_view")
+                    logger.debug("Creating or replacing ball_events from arrow_view")
                     con.execute("CREATE OR REPLACE TABLE ball_events AS SELECT * FROM arrow_view")
 
                 # Check resulting row count for quick verification
                 try:
                     res = con.execute("SELECT COUNT(*) FROM ball_events").fetchone()
-                    print(f"[QueryEngine.ingest_events] ball_events row_count_after_write={res[0] if res else 'unknown'}")
+                    logger.debug(f"ball_events row_count_after_write={res[0] if res else 'unknown'}")
                 except Exception as e:
-                    print(f"[QueryEngine.ingest_events] Failed to fetch row count after write: {e}")
+                    logger.debug(f"Failed to fetch row count after write: {e}")
             finally:
                 try:
                     con.unregister('arrow_view')

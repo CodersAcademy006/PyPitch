@@ -19,7 +19,7 @@ from pypitch.live.ingestor import StreamIngestor
 from pypitch.serve.auth import verify_api_key
 from pypitch.serve.rate_limit import check_rate_limit
 from pypitch.serve.monitoring import record_request_metrics, record_error_metrics
-from pypitch.config import API_CORS_ORIGINS
+from pypitch.config import API_CORS_ORIGINS, validate_config
 
 import logging
 
@@ -57,6 +57,11 @@ class PyPitchAPI:
             session: PyPitch session instance. If None, uses singleton.
             start_ingestor: Whether to start the live ingestor (disable for testing).
         """
+        # Validate configuration for production readiness
+        import os
+        if os.getenv("PYPITCH_ENV", "development") == "production":
+            validate_config()
+        
         self.app = FastAPI(
             title="PyPitch API",
             description="Cricket Analytics API powered by PyPitch",
@@ -80,7 +85,7 @@ class PyPitchAPI:
         @self.app.middleware("http")
         async def rate_limit_middleware(request: Request, call_next):
             # Skip rate limiting for docs and health endpoints
-            if request.url.path in ["/v1/docs", "/v1/redoc", "/v1/openapi.json", "/health", "/"]:
+            if request.url.path in ["/v1/docs", "/v1/redoc", "/v1/openapi.json", "/health", "/v1/health", "/"]:
                 return await call_next(request)
 
             await check_rate_limit(request)
