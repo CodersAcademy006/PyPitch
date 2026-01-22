@@ -9,10 +9,10 @@ def validate_imports():
     """Validate all core imports work."""
     print("🔍 Validating imports...")
     try:
-        from pypitch.api.session import Session
-        from pypitch.storage.engine import StorageEngine
-        from pypitch.query.defs import QueryType
-        from pypitch.runtime.executor import Executor
+        from pypitch.api.session import PyPitchSession
+        from pypitch.storage.engine import QueryEngine
+        from pypitch.query.defs import WinProbQuery, FantasyQuery
+        from pypitch.runtime.executor import RuntimeExecutor
         from pypitch.compute.metrics import batting, bowling
         print("✅ All core imports successful")
         return True
@@ -24,9 +24,9 @@ def validate_session():
     """Validate session creation and cleanup."""
     print("\n🔍 Validating session lifecycle...")
     try:
-        from pypitch.api.session import Session
+        from pypitch.api.session import PyPitchSession
         
-        session = Session()
+        session = PyPitchSession()
         print("✅ Session created")
         
         session.close()
@@ -43,10 +43,10 @@ def validate_performance():
     """Validate basic performance benchmarks."""
     print("\n🔍 Validating performance...")
     try:
-        from pypitch.api.session import Session
+        from pypitch.api.session import PyPitchSession
         
         start = time.time()
-        session = Session()
+        session = PyPitchSession()
         init_time = time.time() - start
         
         session.close()

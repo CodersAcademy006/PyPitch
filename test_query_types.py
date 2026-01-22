@@ -2,13 +2,12 @@
 Test query type definitions and validation.
 """
 import pytest
-from pypitch.query.defs import QueryType, Phase, Role
+from pypitch.query.defs import WinProbQuery, FantasyQuery, Phase, Role
 
-def test_query_type_enum():
-    """Test QueryType enum values."""
-    assert QueryType.BATTER_VS_BOWLER.value == "batter_vs_bowler"
-    assert QueryType.VENUE_STATS.value == "venue_stats"
-    assert QueryType.WIN_PREDICTION.value == "win_prediction"
+def test_query_classes_exist():
+    """Test that query classes can be imported."""
+    assert WinProbQuery is not None
+    assert FantasyQuery is not None
 
 def test_phase_type():
     """Test Phase literal type."""

@@ -6,11 +6,11 @@ from pathlib import Path
 
 def test_core_functionality():
     """Test basic pypitch operations."""
-    from pypitch.api.session import Session
-    from pypitch.storage.engine import StorageEngine
+    from pypitch.api.session import PyPitchSession
+    from pypitch.storage.engine import QueryEngine
     
     # Initialize session
-    session = Session()
+    session = PyPitchSession()
     engine = None
     
     try:
